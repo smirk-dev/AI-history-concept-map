@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Enhanced 3D Concept Map - Suryansh's Chat History</title>
+  <style>
+    body { 
+      margin: 0; 
+      overflow: hidden; 
+      background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
+      font-family: 'Arial', sans-serif;
+    }
+    canvas { display: block; }
+    
+    .ui-overlay {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      z-index: 1000;
+      color: white;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 15px;
+      border-radius: 10px;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .info-panel {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 1000;
+      color: white;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 15px;
+      border-radius: 10px;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      min-width: 200px;
+      max-width: 300px;
+    }
+    
+    .legend {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      z-index: 1000;
+      color: white;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 15px;
+      border-radius: 10px;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .legend-item {
+      display: flex;
+      align-items: center;
+      margin: 5px 0;
+    }
+    
+    .legend-color {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      margin-right: 10px;
+    }
+    
+    .controls {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 1000;
+      color: white;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 15px;
+      border-radius: 10px;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .control-button {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: white;
+      padding: 8px 12px;
+      margin: 2px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .control-button:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+    }
+    
+    .tooltip {
+      position: fixed;
+      background: rgba(0, 0, 0, 0.9);
+      color: white;
+      padding: 10px;
+      border-radius: 5px;
+      pointer-events: none;
+      z-index: 1001;
+      max-width: 200px;
+      font-size: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+  </style>
+</head>
+<body>
+  <div class="ui-overlay">
+    <h3>🧠 Knowledge Graph</h3>
+    <p>Interactive 3D visualization of Suryansh's interests and projects</p>
+    <small>Click and drag to rotate • Scroll to zoom • Click nodes for details</small>
+  </div>
+  
+  <div class="info-panel" id="info-panel">
+    <h4>Node Information</h4>
+    <p>Click on any node to see details about that topic or project.</p>
+  </div>
+  
+  <div class="legend">
+    <h4>Categories</h4>
+    <div class="legend-item">
+      <div class="legend-color" style="background-color: #ff5733;"></div>
+      <span>AI/ML & Quantum</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background-color: #33c1ff;"></div>
+      <span>Design & Media</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background-color: #85ff33;"></div>
+      <span>Projects & Tools</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background-color: #ff33bf;"></div>
+      <span>Education & Career</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background-color: #ffd633;"></div>
+      <span>Health & Fitness</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background-color: #9b33ff;"></div>
+      <span>Language & Culture</span>
+    </div>
+  </div>
+  
+  <div class="controls">
+    <h4>Controls</h4>
+    <button class="control-button" onclick="resetView()">Reset View</button>
+    <button class="control-button" onclick="toggleAnimation()">Toggle Animation</button>
+    <button class="control-button" onclick="focusOnCategory()">Focus Mode</button>
+  </div>
+  
+  <div class="tooltip" id="tooltip"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+  
+  console.log('Enhanced 3D Concept Map starting...');
+  
+  try {
+    // Scene setup
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0a0a0a);
+    scene.fog = new THREE.Fog(0x0a0a0a, 50, 200);
+    
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.body.appendChild(renderer.domElement);
+    
+    // Enhanced lighting
+    const ambientLight = new THREE.AmbientLight(0x404040, 0.4);
+    scene.add(ambientLight);
+    
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    directionalLight.position.set(20, 20, 20);
+    directionalLight.castShadow = true;
+    scene.add(directionalLight);
+    
+    const pointLight = new THREE.PointLight(0x4488ff, 0.6, 100);
+    pointLight.position.set(0, 0, 0);
+    scene.add(pointLight);
+
+    // Mouse controls (simplified OrbitControls alternative)
+    let mouseX = 0, mouseY = 0;
+    let targetRotationX = 0, targetRotationY = 0;
+    let rotationX = 0, rotationY = 0;
+    let distance = 80;
+    
+    camera.position.set(0, 0, distance);
+    
+    // Node data with enhanced information
+    const nodes = [
+      {"id":0,"label":"AI/ML & Quantum","color":0xff5733,"description":"Core focus on artificial intelligence, machine learning, and quantum computing technologies"},
+      {"id":1,"label":"Quantum Computing","color":0xff5733,"description":"Exploring quantum algorithms and quantum machine learning"},
+      {"id":2,"label":"AI/ML Applications","color":0xff5733,"description":"Practical applications of AI/ML in various domains"},
+      {"id":3,"label":"LangChain","color":0xff5733,"description":"Framework for developing applications with language models"},
+      {"id":4,"label":"LLMs","color":0xff5733,"description":"Large Language Models and their applications"},
+      {"id":5,"label":"GenAI Tools","color":0xff5733,"description":"Generative AI tools and platforms"},
+      {"id":6,"label":"Model Fine-Tuning","color":0xff5733,"description":"Customizing AI models for specific tasks"},
+      {"id":7,"label":"Legal AI Assistants","color":0xff5733,"description":"AI applications in legal domain"},
+      {"id":8,"label":"OCR with Mistral","color":0xff5733,"description":"Optical Character Recognition using Mistral models"},
+      {"id":9,"label":"AI in Aviation & Climate","color":0xff5733,"description":"AI applications in aviation and climate science"},
+      {"id":10,"label":"Design & Media","color":0x33c1ff,"description":"Creative design and media production"},
+      {"id":11,"label":"Graphic Design","color":0x33c1ff,"description":"Visual design and graphic arts"},
+      {"id":12,"label":"Adobe Tools","color":0x33c1ff,"description":"Adobe Creative Suite applications"},
+      {"id":13,"label":"Video Automation","color":0x33c1ff,"description":"Automated video production workflows"},
+      {"id":14,"label":"Synthesia AI","color":0x33c1ff,"description":"AI-powered video creation platform"},
+      {"id":15,"label":"ElevenLabs","color":0x33c1ff,"description":"AI voice synthesis and audio generation"},
+      {"id":16,"label":"AI Film Project","color":0x33c1ff,"description":"AI-assisted film production project"},
+      {"id":17,"label":"Projects & Tools","color":0x85ff33,"description":"Development projects and technical tools"},
+      {"id":18,"label":"Vidhisaar AI","color":0x85ff33,"description":"AI-powered legal assistant platform"},
+      {"id":19,"label":"FastAPI Backend","color":0x85ff33,"description":"High-performance API backend development"},
+      {"id":20,"label":"Indian Kanoon API","color":0x85ff33,"description":"Legal database API integration"},
+      {"id":21,"label":"LangChain Pipeline","color":0x85ff33,"description":"AI processing pipeline using LangChain"},
+      {"id":22,"label":"n8n Automation","color":0x85ff33,"description":"Workflow automation platform"},
+      {"id":23,"label":"Legal Assistant MVP","color":0x85ff33,"description":"Minimum viable product for legal AI assistant"},
+      {"id":24,"label":"Education & Career","color":0xff33bf,"description":"Academic and professional development"},
+      {"id":25,"label":"IIT Ropar","color":0xff33bf,"description":"Indian Institute of Technology Ropar"},
+      {"id":26,"label":"NYU Shanghai","color":0xff33bf,"description":"New York University Shanghai"},
+      {"id":27,"label":"Google Quantum AI Course","color":0xff33bf,"description":"Quantum computing course by Google"},
+      {"id":28,"label":"Stanford Machine Learning","color":0xff33bf,"description":"Stanford's machine learning curriculum"},
+      {"id":29,"label":"Freelance Design Internships","color":0xff33bf,"description":"Professional design experience"},
+      {"id":30,"label":"Polymath Goal 2025","color":0xff33bf,"description":"Goal to become a polymath by 2025"},
+      {"id":31,"label":"Health & Fitness","color":0xffd633,"description":"Physical wellness and fitness activities"},
+      {"id":32,"label":"Gym Routine","color":0xffd633,"description":"Regular exercise and workout plans"},
+      {"id":33,"label":"Weight Loss Diet","color":0xffd633,"description":"Nutrition and dietary planning"},
+      {"id":34,"label":"Pre/Post Workout Meals","color":0xffd633,"description":"Nutrition timing around workouts"},
+      {"id":35,"label":"Language & Culture","color":0x9b33ff,"description":"Linguistic and cultural studies"},
+      {"id":36,"label":"Learning German","color":0x9b33ff,"description":"German language acquisition"},
+      {"id":37,"label":"Word Origins & Civilizations","color":0x9b33ff,"description":"Etymology and historical linguistics"},
+      {"id":38,"label":"Deen Dialogue NGO","color":0x9b33ff,"description":"Non-profit organization involvement"},
+      {"id":39,"label":"AI Prompt Engineering","color":0xff5733,"description":"Optimizing AI model interactions"},
+      {"id":40,"label":"Team Coaching","color":0xff5733,"description":"Leadership and team development"},
+      {"id":41,"label":"Psychological Safety","color":0xff5733,"description":"Creating safe team environments"},
+      {"id":42,"label":"AI Bias","color":0xff5733,"description":"Addressing bias in AI systems"},
+      {"id":43,"label":"Demographic Bias","color":0xff5733,"description":"Bias related to demographics"},
+      {"id":44,"label":"Geographical Bias","color":0xff5733,"description":"Location-based bias in AI systems"}
+    ];
+
+    const edges = [
+      {"source":0,"target":1},{"source":0,"target":2},{"source":0,"target":3},
+      {"source":0,"target":4},{"source":0,"target":5},{"source":0,"target":6},
+      {"source":0,"target":7},{"source":0,"target":8},{"source":0,"target":9},
+      {"source":10,"target":11},{"source":10,"target":12},{"source":10,"target":13},
+      {"source":10,"target":14},{"source":10,"target":15},{"source":10,"target":16},
+      {"source":17,"target":18},{"source":17,"target":19},{"source":17,"target":20},
+      {"source":17,"target":21},{"source":17,"target":22},{"source":17,"target":23},
+      {"source":24,"target":25},{"source":24,"target":26},{"source":24,"target":27},
+      {"source":24,"target":28},{"source":24,"target":29},{"source":24,"target":30},
+      {"source":31,"target":32},{"source":31,"target":33},{"source":31,"target":34},
+      {"source":35,"target":36},{"source":35,"target":37},{"source":35,"target":38},
+      {"source":0,"target":39},{"source":4,"target":39},{"source":2,"target":40},
+      {"source":40,"target":41},{"source":0,"target":42},{"source":2,"target":42},
+      {"source":4,"target":42},{"source":42,"target":43},{"source":42,"target":44}
+    ];
+
+    // Create nodes with enhanced visuals
+    const nodeGeometry = new THREE.SphereGeometry(1.2, 32, 32);
+    const nodeMeshes = {};
+    const nodeGroup = new THREE.Group();
+    const sprites = [];
+    
+    // Better node positioning using force-directed layout principles
+    const positionNodes = (nodes) => {
+      const positions = [];
+      const categories = {};
+      
+      // Group nodes by category
+      nodes.forEach(node => {
+        const category = getCategory(node.color);
+        if (!categories[category]) categories[category] = [];
+        categories[category].push(node);
+      });
+      
+      // Position categories in a circular arrangement
+      const categoryKeys = Object.keys(categories);
+      const angleStep = (Math.PI * 2) / categoryKeys.length;
+      
+      categoryKeys.forEach((category, catIndex) => {
+        const categoryAngle = catIndex * angleStep;
+        const categoryRadius = 25;
+        const centerX = Math.cos(categoryAngle) * categoryRadius;
+        const centerZ = Math.sin(categoryAngle) * categoryRadius;
+        
+        // Position nodes within each category
+        categories[category].forEach((node, nodeIndex) => {
+          const localAngle = (nodeIndex / categories[category].length) * Math.PI * 2;
+          const localRadius = 8 + (nodeIndex * 0.5);
+          
+          positions[node.id] = {
+            x: centerX + Math.cos(localAngle) * localRadius,
+            y: (nodeIndex - categories[category].length / 2) * 3,
+            z: centerZ + Math.sin(localAngle) * localRadius
+          };
+        });
+      });
+      
+      return positions;
+    };
+    
+    const getCategory = (color) => {
+      const colorMap = {
+        0xff5733: 'AI/ML & Quantum',
+        0x33c1ff: 'Design & Media',
+        0x85ff33: 'Projects & Tools',
+        0xff33bf: 'Education & Career',
+        0xffd633: 'Health & Fitness',
+        0x9b33ff: 'Language & Culture'
+      };
+      return colorMap[color] || 'Other';
+    };
+    
+    const nodePositions = positionNodes(nodes);
+    
+    // Create enhanced node meshes
+    nodes.forEach((node) => {
+      const pos = nodePositions[node.id];
+      
+      // Create glowing material
+      const material = new THREE.MeshPhongMaterial({ 
+        color: node.color,
+        shininess: 100,
+        specular: 0x222222,
+        transparent: true,
+        opacity: 0.9
+      });
+      
+      const mesh = new THREE.Mesh(nodeGeometry, material);
+      mesh.position.set(pos.x, pos.y, pos.z);
+      mesh.userData = { 
+        id: node.id,
+        label: node.label,
+        description: node.description,
+        originalColor: node.color
+      };
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      
+      nodeMeshes[node.id] = mesh;
+      nodeGroup.add(mesh);
+      
+      // Create enhanced labels
+      const labelCanvas = document.createElement('canvas');
+      const ctx = labelCanvas.getContext('2d');
+      labelCanvas.width = 512;
+      labelCanvas.height = 128;
+      
+      // Add background
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+      ctx.fillRect(0, 0, labelCanvas.width, labelCanvas.height);
+      
+      // Add text
+      ctx.font = 'bold 24px Arial';
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(node.label, labelCanvas.width / 2, labelCanvas.height / 2);
+      
+      const labelTexture = new THREE.CanvasTexture(labelCanvas);
+      const spriteMaterial = new THREE.SpriteMaterial({ 
+        map: labelTexture,
+        transparent: true,
+        opacity: 0.8
+      });
+      const sprite = new THREE.Sprite(spriteMaterial);
+      sprite.scale.set(12, 3, 1);
+      sprite.position.set(pos.x, pos.y + 3, pos.z);
+      sprites.push(sprite);
+      scene.add(sprite);
+    });
+
+    scene.add(nodeGroup);
+    
+    // Create enhanced edges with curves
+    const edgeGroup = new THREE.Group();
+    edges.forEach(({ source, target }) => {
+      const sourcePos = nodeMeshes[source].position;
+      const targetPos = nodeMeshes[target].position;
+      
+      // Create curved line
+      const curve = new THREE.QuadraticBezierCurve3(
+        sourcePos.clone(),
+        new THREE.Vector3(
+          (sourcePos.x + targetPos.x) / 2,
+          Math.max(sourcePos.y, targetPos.y) + 5,
+          (sourcePos.z + targetPos.z) / 2
+        ),
+        targetPos.clone()
+      );
+      
+      const points = curve.getPoints(50);
+      const geometry = new THREE.BufferGeometry().setFromPoints(points);
+      const material = new THREE.LineBasicMaterial({ 
+        color: 0x444444,
+        transparent: true,
+        opacity: 0.3
+      });
+      const line = new THREE.Line(geometry, material);
+      edgeGroup.add(line);
+    });
+    
+    scene.add(edgeGroup);
+    
+    // Mouse interaction
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    const tooltip = document.getElementById('tooltip');
+    const infoPanel = document.getElementById('info-panel');
+    
+    let selectedNode = null;
+    let isAnimating = true;
+    
+    // Event listeners
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('click', onMouseClick);
+    document.addEventListener('wheel', onMouseWheel);
+    
+    function onMouseMove(event) {
+      // Update mouse position for rotation
+      if (event.buttons === 1) { // Left mouse button
+        const deltaX = event.movementX * 0.005;
+        const deltaY = event.movementY * 0.005;
+        targetRotationY += deltaX;
+        targetRotationX += deltaY;
+      }
+      
+      // Update mouse position for raycasting
+      mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+      
+      // Raycasting for hover effects
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObjects(nodeGroup.children);
+      
+      if (intersects.length > 0) {
+        const hoveredNode = intersects[0].object;
+        
+        // Show tooltip
+        tooltip.style.display = 'block';
+        tooltip.style.left = event.clientX + 10 + 'px';
+        tooltip.style.top = event.clientY - 10 + 'px';
+        tooltip.innerHTML = `<strong>${hoveredNode.userData.label}</strong><br>${hoveredNode.userData.description}`;
+        
+        // Highlight node
+        hoveredNode.material.color.setHex(0xffffff);
+        hoveredNode.scale.set(1.3, 1.3, 1.3);
+        
+        // Reset other nodes
+        nodeGroup.children.forEach(node => {
+          if (node !== hoveredNode && node !== selectedNode) {
+            node.material.color.setHex(node.userData.originalColor);
+            node.scale.set(1, 1, 1);
+          }
+        });
+        
+        document.body.style.cursor = 'pointer';
+      } else {
+        tooltip.style.display = 'none';
+        document.body.style.cursor = 'default';
+        
+        // Reset all nodes except selected
+        nodeGroup.children.forEach(node => {
+          if (node !== selectedNode) {
+            node.material.color.setHex(node.userData.originalColor);
+            node.scale.set(1, 1, 1);
+          }
+        });
+      }
+    }
+    
+    function onMouseClick(event) {
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObjects(nodeGroup.children);
+      
+      if (intersects.length > 0) {
+        const clickedNode = intersects[0].object;
+        
+        // Reset previous selection
+        if (selectedNode) {
+          selectedNode.material.color.setHex(selectedNode.userData.originalColor);
+          selectedNode.scale.set(1, 1, 1);
+        }
+        
+        // Select new node
+        selectedNode = clickedNode;
+        selectedNode.material.color.setHex(0xffff00);
+        selectedNode.scale.set(1.5, 1.5, 1.5);
+        
+        // Update info panel
+        infoPanel.innerHTML = `
+          <h4>${selectedNode.userData.label}</h4>
+          <p>${selectedNode.userData.description}</p>
+          <small>Category: ${getCategory(selectedNode.userData.originalColor)}</small>
+        `;
+      }
+    }
+    
+    function onMouseWheel(event) {
+      distance += event.deltaY * 0.1;
+      distance = Math.max(20, Math.min(150, distance));
+    }
+    
+    // Animation loop
+    function animate() {
+      requestAnimationFrame(animate);
+      
+      // Smooth rotation
+      rotationX += (targetRotationX - rotationX) * 0.05;
+      rotationY += (targetRotationY - rotationY) * 0.05;
+      
+      // Auto-rotation when animating
+      if (isAnimating) {
+        targetRotationY += 0.005;
+      }
+      
+      // Update camera position
+      camera.position.x = Math.sin(rotationY) * Math.cos(rotationX) * distance;
+      camera.position.y = Math.sin(rotationX) * distance;
+      camera.position.z = Math.cos(rotationY) * Math.cos(rotationX) * distance;
+      camera.lookAt(0, 0, 0);
+      
+      // Animate sprites to face camera
+      sprites.forEach(sprite => {
+        sprite.lookAt(camera.position);
+      });
+      
+      renderer.render(scene, camera);
+    }
+    
+    // Control functions
+    window.resetView = () => {
+      targetRotationX = 0;
+      targetRotationY = 0;
+      distance = 80;
+      if (selectedNode) {
+        selectedNode.material.color.setHex(selectedNode.userData.originalColor);
+        selectedNode.scale.set(1, 1, 1);
+        selectedNode = null;
+      }
+      infoPanel.innerHTML = '<h4>Node Information</h4><p>Click on any node to see details about that topic or project.</p>';
+    };
+    
+    window.toggleAnimation = () => {
+      isAnimating = !isAnimating;
+    };
+    
+    window.focusOnCategory = () => {
+      // This could be expanded to focus on specific categories
+      alert('Focus mode - feature coming soon!');
+    };
+    
+    // Handle window resize
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+    
+    // Start animation
+    animate();
+    
+    console.log('Enhanced 3D Concept Map loaded successfully!');
+    
+  } catch (error) {
+    console.error('Error:', error);
+    document.body.innerHTML = `
+      <div style="color: white; text-align: center; margin-top: 50px;">
+        <h1>Error loading visualization</h1>
+        <p>${error.message}</p>
+        <p>Please check the console for more details.</p>
+      </div>
+    `;
+  }
+</script>
+</body>
+</html>
