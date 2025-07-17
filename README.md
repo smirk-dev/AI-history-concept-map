@@ -4,7 +4,7 @@
 
 Welcome to the **AI History Concept Map**! This project is a captivating, interactive 3D visualization that maps the interconnected landscape of artificial intelligence, machine learning, quantum computing, and a wide array of related domains—from design and media to legal technologies, education, and personal growth.
 
-Visit the live project: [ai-history-concept-map.vercel.app](https://ai-history-concept-map.vercel.app)
+Visit the live project: [website](https://aihistoryconceptmap.vercel.app)
 
 ---
 
